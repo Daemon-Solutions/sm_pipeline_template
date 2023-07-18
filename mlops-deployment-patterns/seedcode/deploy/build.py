@@ -73,6 +73,7 @@ def extend_config(args, model_package_arn, stage_config):
         "SageMakerProjectName": args.sagemaker_project_name,
         "ModelPackageName": model_package_arn,
         "ModelExecutionRoleArn": args.model_execution_role,
+        "DataCaptureUploadPath": "s3://" + args.s3_bucket + '/datacapture-' + stage_config["Parameters"]["StageName"],
     }
     new_tags = {
         "sagemaker:deployment-stage": stage_config["Parameters"]["StageName"],
@@ -131,6 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("--sagemaker-project-id", type=str, required=True)
     parser.add_argument("--sagemaker-project-name", type=str, required=True)
     parser.add_argument("--sagemaker-project-arn", type=str, required=False)
+    parser.add_argument("--s3-bucket", type=str, required=True)
     parser.add_argument("--import-staging-config", type=str, default="staging-config.json")
     parser.add_argument("--import-prod-config", type=str, default="prod-config.json")
     parser.add_argument("--export-staging-config", type=str, default="staging-config-export.json")
@@ -146,10 +148,6 @@ if __name__ == "__main__":
     log_format = "%(levelname)s: [%(filename)s:%(lineno)s] %(message)s"
     logging.basicConfig(format=log_format, level=args.log_level)
 
-    logging.info(f"args.model_package_group_name: {args.model_package_group_name} ")
-    logging.info("args:")
-    logging.info(args)
-
     # Get the latest approved package
     model_package_arn = get_approved_package(args.model_package_group_name)
 
@@ -160,7 +158,7 @@ if __name__ == "__main__":
     with open(args.export_staging_config, "w") as f:
         json.dump(staging_config, f, indent=4)
     if (args.export_cfn_params_tags):
-      create_cfn_params_tags_file(staging_config, args.export_staging_params, args.export_staging_tags)
+        create_cfn_params_tags_file(staging_config, args.export_staging_params, args.export_staging_tags)
 
     # Write the prod config for code pipeline
     with open(args.import_prod_config, "r") as f:
@@ -169,4 +167,4 @@ if __name__ == "__main__":
     with open(args.export_prod_config, "w") as f:
         json.dump(prod_config, f, indent=4)
     if (args.export_cfn_params_tags):
-      create_cfn_params_tags_file(prod_config, args.export_prod_params, args.export_prod_tags)
+        create_cfn_params_tags_file(prod_config, args.export_prod_params, args.export_prod_tags)

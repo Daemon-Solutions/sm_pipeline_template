@@ -2,7 +2,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >-
-  Template for creating a Service Catalog product based on the multi-model-endpoint SageMaker Custom Example
+  Template for creating a Service Catalog product based on the asynchronous-inference-endpoint SageMaker Custom Example
 
 Parameters:
 
@@ -12,12 +12,12 @@ Parameters:
 
   ProductNameParameter:
     Type: String
-    Default: Multi Model Endpoint SageMaker Project Example
+    Default: MLOps Deployment Patterns SageMaker Project Example
     Description: The name of this product within the portfolio.
 
   ProductDescriptionParameter:
     Type: String
-    Default: 'The purpose of this template is to deploy a multi-model inference endpoint. It accepts as input the S3 path where the different models are stored. All of the models need to be at the root of the path provided, and they must all be .tar.gz files.'
+    Default: 'The purpose of this template is to build and deploy a model using various MLOps deployment patterns.'
     Description: The description of this product within the portfolio.
 
   ProductOwnerParameter:
@@ -57,7 +57,7 @@ Parameters:
   
   SageMakerProjectsProjectNameParameter:
     Type: String
-    Default: multi-model-endpoint
+    Default: mlops-deployment-patterns
     Description: Project folder inside of the GitHub repo for this project
 
 Metadata: 
@@ -131,7 +131,7 @@ Resources:
   BootstrapS3Bucket:
     Type: AWS::S3::Bucket
     Properties: 
-      BucketName: !Join ['-',['sm-project-mme-example', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
+      BucketName: !Join ['-',['sm-project-mlopsdeploy-example', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -159,8 +159,8 @@ Resources:
   BootstrapLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties: 
-      RoleName: !Join ['-', ['SMCustomProject-MME-Bootstrap-Role', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
-      Description: Role used for launching the lambda function to bootstrap creation of the Multi-model Endpoint SageMaker Custom Project Template example
+      RoleName: !Join ['-', ['SMCustomProject-MLOpsDeploy-Bootstrap-Role', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
+      Description: Role used for launching the lambda function to bootstrap creation of the MLOps deployment patterns Endpoint SageMaker Custom Project Template example
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -204,7 +204,6 @@ Resources:
           Key: sagemaker:studio-visibility
           Value: 'true'
 
-
   ServiceCatalogProductAssociation:
     Type: AWS::ServiceCatalog::PortfolioProductAssociation
     Properties: 
@@ -222,11 +221,11 @@ Resources:
                 Service:
                   - servicecatalog.amazonaws.com
               Action: 'sts:AssumeRole'
-        Description: Role to use for launching the MME SageMaker Project example.
+        Description: Role to use for launching the GitLab SageMaker Project example.
         ManagedPolicyArns: 
           - arn:aws:iam::aws:policy/AmazonSageMakerAdmin-ServiceCatalogProductsServiceRolePolicy
         Policies: 
-          - PolicyName: SM-MME-Example-Launch-Policy
+          - PolicyName: SM-Gitlab-Example-Launch-Policy
             PolicyDocument:
               Version: "2012-10-17"
               Statement:
@@ -240,22 +239,22 @@ Resources:
                     - 'iam:PassRole'
                   Resource:
                     - !Join [ ':', [ 'arn', !Ref 'AWS::Partition', 'iam:', !Ref 'AWS::AccountId', 'role/service-role/AmazonSageMakerServiceCatalogProductsUseRole'] ]
-        RoleName: !Join ['-', ['SM-MME-Example-Launch-Role', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
+        RoleName: !Join ['-', ['SM-MLOpsDeploy-Example-Launch-Role', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
 
   ServiceCatalogProductRoleLaunchContstraint:
     Type: AWS::ServiceCatalog::LaunchRoleConstraint
     DependsOn: 
       - ServiceCatalogProductAssociation
     Properties: 
-      Description: Role for launching the multi-model endpoint product
+      Description: Role for launching the mlops deployment pattern endpoint product
       PortfolioId: !Ref PortfolioIDParameter
       ProductId: !Ref ServiceCatalogProduct
       RoleArn: !GetAtt ServiceCatalogProductLaunchRole.Arn
-  
+
   CustomBackedLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Join ['-', ['aws-samples-mme-lambda-bootstrapper', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
+      FunctionName: !Join ['-', ['aws-samples-mlopsdeploy-lambda-bootstrapper', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId']]]]]]
       Runtime: python3.9
       Role: !GetAtt BootstrapLambdaExecutionRole.Arn
       Handler: index.lambda_handler
@@ -407,7 +406,7 @@ Resources:
                 responseData = {}
                 responseData['message'] = 'exception caught'
                 cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
-      Description: Cloudformation Custom Lambda to bootstrap the Multi-model Endpoint SageMaker Project example
+      Description: Cloudformation Custom Lambda to bootstrap the Asynchronous Endpoint SageMaker Project example
 
   InvokeCustomLambda:
     Type: Custom::InvokeCustomLambda
@@ -418,10 +417,11 @@ Resources:
       SageMakerProjectRepoNameBranch: !Ref SageMakerProjectRepoNameBranchParameter
       SageMakerProjectsProjectName: !Ref SageMakerProjectsProjectNameParameter
       TemplateSubstitutions:
-        AWSDEFAULT___CODE_STAGING_BUCKET___: !Ref BootstrapS3Bucket
-        AWSDEFAULT___PROJECT_NAME___: !Ref SageMakerProjectsProjectNameParameter
+        AWSDEFAULT___CODE_STAGING_BUCKET___ : !Ref BootstrapS3Bucket
+        AWSDEFAULT___PROJECT_NAME___ : !Ref SageMakerProjectsProjectNameParameter
       Archives:
-        - ['multi-model-endpoint-seedcode.zip','/seedcode']
+        - ['mlops-deployment-patterns-build.zip','/seedcode/build']
+        - ['mlops-deployment-patterns-deploy.zip','/seedcode/deploy']
 
 
 Outputs:
@@ -445,7 +445,7 @@ Outputs:
 
   ServiceCatalogProductLaunchRoleARN:
     Description: ARN of the Role used to launch this product
-    Value: !GetAtt ServiceCatalogProductLaunchRole.Arn
+    Value: !Join [ ':', [ 'arn', !Ref 'AWS::Partition', 'iam:', !Ref 'AWS::AccountId', 'role/service-role/AmazonSageMakerServiceCatalogProductsLaunchRole'] ]
     Export:
       Name: !Join [':', [!Ref 'AWS::StackName', 'ServiceCatalogProductLaunchRoleARN'] ]
   
