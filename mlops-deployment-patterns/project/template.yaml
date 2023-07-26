@@ -76,7 +76,7 @@ Resources:
               Provider: CodeStarSourceConnection
               Version: 1
             Configuration:
-              ConnectionArn: arn:aws:codestar-connections:eu-west-1:144986566169:connection/34646bb3-fa14-4e6b-88ce-d19a8b9e5732
+              ConnectionArn: 'arn:aws:codestar-connections:eu-west-1:144986566169:connection/34646bb3-fa14-4e6b-88ce-d19a8b9e5732'
               FullRepositoryId: Daemon-Solutions/sm_pipeline_template
               BranchName: main
               OutputArtifactFormat: CODE_ZIP
