@@ -1,13 +1,3 @@
-"""Example workflow pipeline script for abalone pipeline.
-
-                                               . -ModelStep
-                                              .
-    Process-> Train -> Evaluate -> Condition .
-                                              .
-                                               . -(stop)
-
-Implements a get_pipeline(**kwargs) method.
-"""
 import os
 
 import boto3
@@ -46,6 +36,9 @@ from sagemaker.workflow.steps import (
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.model import Model
 from sagemaker.workflow.pipeline_context import PipelineSession
+
+from sagemaker.workflow.lambda_step import LambdaStep
+from sagemaker.lambda_helper import Lambda
 
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -125,9 +118,9 @@ def get_pipeline(
     sagemaker_project_arn=None,
     role=None,
     default_bucket=None,
-    model_package_group_name="AbalonePackageGroup",
-    pipeline_name="AbalonePipeline",
-    base_job_prefix="Abalone",
+    model_package_group_name="NYCTrafficIncidentsModelPackageGroupName",
+    pipeline_name="NYCTrafficIncidentsPipeline",
+    base_job_prefix="NYCTraffic",
     processing_instance_type="ml.m5.xlarge",
     training_instance_type="ml.m5.xlarge",
 ):
@@ -147,55 +140,70 @@ def get_pipeline(
 
     pipeline_session = get_pipeline_session(region, default_bucket)
 
-    # parameters for pipeline execution
-    processing_instance_count = ParameterInteger(name="ProcessingInstanceCount", default_value=1)
-    model_approval_status = ParameterString(
-        name="ModelApprovalStatus", default_value="PendingManualApproval"
-    )
-    input_data = ParameterString(
-        name="InputDataUrl",
-        default_value=f"s3://sagemaker-servicecatalog-seedcode-{region}/dataset/abalone-dataset.csv",
+    model_package_group_name = f"NYCTrafficIncidentsModelPackageGroupName"
+
+    from sagemaker.workflow.parameters import (
+        ParameterInteger,
+        ParameterString,
     )
 
-    # processing step for feature engineering
+    processing_instance_count = ParameterInteger(
+        name="ProcessingInstanceCount",
+        default_value=1
+    )
+    model_approval_status = ParameterString(
+        name="ModelApprovalStatus",
+        default_value="Approved"
+    )
+    input_data = ParameterString(
+        name="InputData",
+        default_value=input_data_uri,
+    )
+    batch_data = ParameterString(
+        name="BatchData",
+        default_value=batch_data_uri,
+    )
+
+    framework_version = "0.23-1"
+
     sklearn_processor = SKLearnProcessor(
-        framework_version="0.23-1",
-        instance_type=processing_instance_type,
+        framework_version=framework_version,
+        instance_type="ml.m5.xlarge",
         instance_count=processing_instance_count,
-        base_job_name=f"{base_job_prefix}/sklearn-abalone-preprocess",
-        sagemaker_session=pipeline_session,
+        base_job_name="nyc-traffic-process",
         role=role,
     )
-    step_args = sklearn_processor.run(
+
+    step_process = ProcessingStep(
+        name="TrafficProcess",
+        processor=sklearn_processor,
+        inputs=[
+        ProcessingInput(source=input_data, destination="/opt/ml/processing/input"),  
+        ],
         outputs=[
             ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
             ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
+            ProcessingOutput(output_name="test", source="/opt/ml/processing/test")
         ],
-        code=os.path.join(BASE_DIR, "preprocess.py"),
-        arguments=["--input-data", input_data],
-    )
-    step_process = ProcessingStep(
-        name="PreprocessAbaloneData",
-        step_args=step_args,
+        code="preprocessing.py",
     )
 
-    # training step for generating model artifacts
-    model_path = f"s3://{sagemaker_session.default_bucket()}/{base_job_prefix}/AbaloneTrain"
+    model_path = f"s3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/TrafficTrain"
+
+
+
     image_uri = sagemaker.image_uris.retrieve(
         framework="xgboost",
         region=region,
         version="1.0-1",
         py_version="py3",
-        instance_type=training_instance_type,
+        instance_type="ml.m5.xlarge"
     )
     xgb_train = Estimator(
         image_uri=image_uri,
-        instance_type=training_instance_type,
+        instance_type="ml.m5.xlarge",
         instance_count=1,
         output_path=model_path,
-        base_job_name=f"{base_job_prefix}/abalone-train",
-        sagemaker_session=pipeline_session,
         role=role,
     )
     xgb_train.set_hyperparameters(
@@ -206,69 +214,49 @@ def get_pipeline(
         gamma=4,
         min_child_weight=6,
         subsample=0.7,
-        silent=0,
+        silent=0
     )
-    step_args = xgb_train.fit(
+
+    step_train = TrainingStep(
+        name="NYCTrafficIncidentTrain",
+        estimator=xgb_train,
         inputs={
             "train": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
                     "train"
                 ].S3Output.S3Uri,
-                content_type="text/csv",
+                content_type="text/csv"
             ),
             "validation": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
                     "validation"
                 ].S3Output.S3Uri,
-                content_type="text/csv",
-            ),
+                content_type="text/csv"
+            )
         },
     )
-    step_train = TrainingStep(
-        name="TrainAbaloneModel",
-        step_args=step_args,
-    )
 
-    # processing step for evaluation
-    script_eval = ScriptProcessor(
+
+    model = Model(
         image_uri=image_uri,
-        command=["python3"],
-        instance_type=processing_instance_type,
-        instance_count=1,
-        base_job_name=f"{base_job_prefix}/script-abalone-eval",
-        sagemaker_session=pipeline_session,
+        model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+        sagemaker_session=sagemaker_session,
         role=role,
     )
-    step_args = script_eval.run(
-        inputs=[
-            ProcessingInput(
-                source=step_train.properties.ModelArtifacts.S3ModelArtifacts,
-                destination="/opt/ml/processing/model",
-            ),
-            ProcessingInput(
-                source=step_process.properties.ProcessingOutputConfig.Outputs[
-                    "test"
-                ].S3Output.S3Uri,
-                destination="/opt/ml/processing/test",
-            ),
-        ],
-        outputs=[
-            ProcessingOutput(output_name="evaluation", source="/opt/ml/processing/evaluation"),
-        ],
-        code=os.path.join(BASE_DIR, "evaluate.py"),
-    )
-    evaluation_report = PropertyFile(
-        name="AbaloneEvaluationReport",
-        output_name="evaluation",
-        path="evaluation.json",
-    )
-    step_eval = ProcessingStep(
-        name="EvaluateAbaloneModel",
-        step_args=step_args,
-        property_files=[evaluation_report],
+
+    inputs = CreateModelInput(
+        instance_type="ml.m5.large",
+        accelerator_type="ml.eia1.medium",
     )
 
-    # register model step that will be conditionally executed
+
+
+    step_create_model = CreateModelStep(
+        name="NYCTrafficIncidentCreateModel",
+        model=model,
+        inputs=inputs,
+    )
+
     model_metrics = ModelMetrics(
         model_statistics=MetricsSource(
             s3_uri="{}/evaluation.json".format(
@@ -277,53 +265,39 @@ def get_pipeline(
             content_type="application/json"
         )
     )
-    model = Model(
-        image_uri=image_uri,
+    step_register = RegisterModel(
+        name="NYCTrafficIncidentRegisterModel",
+        estimator=xgb_train,
         model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
-    step_args = model.register(
         content_types=["text/csv"],
         response_types=["text/csv"],
-        inference_instances=["ml.t2.medium", "ml.m5.large"],
-        transform_instances=["ml.m5.large"],
+        inference_instances=["ml.t2.medium", "ml.m5.xlarge"],
+        transform_instances=["ml.m5.xlarge"],
         model_package_group_name=model_package_group_name,
         approval_status=model_approval_status,
-        model_metrics=model_metrics,
-    )
-    step_register = ModelStep(
-        name="RegisterAbaloneModel",
-        step_args=step_args,
+        model_metrics=model_metrics
     )
 
-    # condition step for evaluating model quality and branching execution
-    cond_lte = ConditionLessThanOrEqualTo(
-        left=JsonGet(
-            step_name=step_eval.name,
-            property_file=evaluation_report,
-            json_path="regression_metrics.mse.value"
+    step_lambda = LambdaStep(
+        name="NotificationLambda",
+        lambda_func=Lambda(
+            function_arn="arn:aws:lambda:eu-west-1:144986566169:function:SageMakerModelNotifier"
         ),
-        right=6.0,
-    )
-    step_cond = ConditionStep(
-        name="CheckMSEAbaloneEvaluation",
-        conditions=[cond_lte],
-        if_steps=[step_register],
-        else_steps=[],
+        inputs={
+            "dummy_input": step_register.properties.ModelPackageName,
+        },
     )
 
-    # pipeline instance
+    pipeline_name = f"NYCTrafficIncidentPipeline"
+
     pipeline = Pipeline(
         name=pipeline_name,
         parameters=[
-            processing_instance_type,
             processing_instance_count,
-            training_instance_type,
             model_approval_status,
             input_data,
+            batch_data,
         ],
-        steps=[step_process, step_train, step_eval, step_cond],
-        sagemaker_session=pipeline_session,
+        steps=[step_process, step_train, step_register, step_create_model, step_lambda],
     )
     return pipeline
