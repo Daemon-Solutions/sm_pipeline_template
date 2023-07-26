@@ -51,7 +51,7 @@ Resources:
            Value: !Ref AWS::Region
       Source:
         Type: GITHUB
-        Location: https://github.com/Daemon-Solutions/sm_pipeline_template.git
+        Location: 'https://github.com/Daemon-Solutions/sm_pipeline_template.git'
         # BuildSpec: codebuild-buildspec.yml
       TimeoutInMinutes: 480
 
