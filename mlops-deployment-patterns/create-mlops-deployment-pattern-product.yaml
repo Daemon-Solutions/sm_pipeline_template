@@ -2,32 +2,32 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >-
-  Template for creating a Service Catalog product based on the asynchronous-inference-endpoint SageMaker Custom Example
+  Template for creating a Service Catalog product which using NYC Traffic Collision Data
 
 Parameters:
 
   PortfolioIDParameter:
     Type: String
-    Description: The ID of the Service Catalog Portfolio you wish you create the product inside. If using the Portfolio Stack example, the value will be found in the Outputs' tab of the stack under "CreatedPortfolioID".
+    Description: The ID of the Service Catalog Portfolio you wish you create the product inside. 
 
   ProductNameParameter:
     Type: String
-    Default: MLOps Deployment Patterns SageMaker Project Example
+    Default: MLOps Demo
     Description: The name of this product within the portfolio.
 
   ProductDescriptionParameter:
     Type: String
-    Default: 'The purpose of this template is to build and deploy a model using various MLOps deployment patterns.'
+    Default: 'The purpose of this template is to train and register an XGBoost Model'
     Description: The description of this product within the portfolio.
 
   ProductOwnerParameter:
     Type: String
-    Default: Product Owner
+    Default: Daemon
     Description: The owner of this product within the portfolio.
 
   ProductDistributorParameter:
     Type: String
-    Default: Product Distributor
+    Default: Daemon
     Description: The distributor of this product within the portfolio.
 
   ProductSupportDescriptionParameter:
@@ -37,23 +37,23 @@ Parameters:
 
   ProductSupportEmailParameter:
     Type: String
-    Default: support@example.com
+    Default: mtose.lehata@dae.mn
     Description: The support email of this product within the portfolio.
 
   ProductSupportURLParameter:
     Type: String
-    Default: 'https://github.com/aws-samples/sagemaker-custom-project-templates'
+    Default: 'https://github.com/Daemon-Solutions/sm_pipeline_template'
     Description: The support url of this product within the portfolio.
 
   SageMakerProjectRepoZipParameter:
     Type: String
-    Default: 'https://github.com/aws-samples/sagemaker-custom-project-templates/archive/refs/heads/main.zip'
-    Description: 'URL for a Zip of the SageMaker Projects Examples GitHub Repo'
+    Default: 'https://github.com/Daemon-Solutions/sm_pipeline_template/archive/refs/heads/main.zip'
+    Description: 'URL for a Zip of a GitHub Repo'
 
   SageMakerProjectRepoNameBranchParameter:
     Type: String
-    Default: 'sagemaker-custom-project-templates-main'
-    Description: 'Name/Branch of the SageMaker Projects Examples GitHub Repo'
+    Default: 'sm_pipeline_template-main'
+    Description: 'Name/Branch of a GitHub Repo'
   
   SageMakerProjectsProjectNameParameter:
     Type: String
