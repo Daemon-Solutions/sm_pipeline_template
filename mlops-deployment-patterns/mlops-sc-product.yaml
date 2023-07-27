@@ -8,6 +8,7 @@ Parameters:
 
   PortfolioIDParameter:
     Type: String
+    Default: port-q7cei7tumwtl2
     Description: The ID of the Service Catalog Portfolio you wish you create the product inside. 
 
   ProductNameParameter:
@@ -230,9 +231,9 @@ Resources:
               Version: "2012-10-17"
               Statement:
                 - Effect: Allow
-                  - Action:
+                  Action:
                     - lambda:InvokeFunction
-                  - Resource: 'arn:aws:lambda:eu-west-1:144986566169:function:SageMakerModelNotifier'
+                  Resource: 'arn:aws:lambda:eu-west-1:144986566169:function:SageMakerModelNotifier'
                 - Effect: Allow
                   Action: 
                     - 's3:PutObject'
