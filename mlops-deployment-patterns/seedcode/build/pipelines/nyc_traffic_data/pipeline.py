@@ -141,6 +141,8 @@ def get_pipeline(
     pipeline_session = get_pipeline_session(region, default_bucket)
 
     model_package_group_name = f"NYCTrafficIncidentsModelPackageGroupName"
+    input_data_uri = 's3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/training_data.csv'
+
 
     from sagemaker.workflow.parameters import (
         ParameterInteger,
@@ -158,10 +160,6 @@ def get_pipeline(
     input_data = ParameterString(
         name="InputData",
         default_value=input_data_uri,
-    )
-    batch_data = ParameterString(
-        name="BatchData",
-        default_value=batch_data_uri,
     )
 
     framework_version = "0.23-1"
@@ -296,7 +294,6 @@ def get_pipeline(
             processing_instance_count,
             model_approval_status,
             input_data,
-            batch_data,
         ],
         steps=[step_process, step_train, step_register, step_create_model, step_lambda],
     )
