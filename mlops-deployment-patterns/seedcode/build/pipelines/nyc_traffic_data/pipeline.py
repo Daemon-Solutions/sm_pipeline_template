@@ -149,41 +149,74 @@ def get_pipeline(
         ParameterString,
     )
 
-    processing_instance_count = ParameterInteger(
-        name="ProcessingInstanceCount",
-        default_value=1
-    )
+    # processing_instance_count = ParameterInteger(
+    #     name="ProcessingInstanceCount",
+    #     default_value=1
+    # )
+    # model_approval_status = ParameterString(
+    #     name="ModelApprovalStatus",
+    #     default_value="Approved"
+    # )
+    # input_data = ParameterString(
+    #     name="InputData",
+    #     default_value=input_data_uri,
+    # )
+
+    # framework_version = "0.23-1"
+
+    # sklearn_processor = SKLearnProcessor(
+    #     framework_version=framework_version,
+    #     instance_type="ml.m5.xlarge",
+    #     instance_count=processing_instance_count,
+    #     base_job_name="nyc-traffic-process",
+    #     role=role,
+    # )
+
+    # step_process = ProcessingStep(
+    #     name="TrafficProcess",
+    #     processor=sklearn_processor,
+    #     inputs=[
+    #     ProcessingInput(source=input_data, destination="/opt/ml/processing/input"),  
+    #     ],
+    #     outputs=[
+    #         ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
+    #         ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
+    #         ProcessingOutput(output_name="test", source="/opt/ml/processing/test")
+    #     ],
+    #     code="preprocessing.py",
+    # )
+
+     # parameters for pipeline execution
+    processing_instance_count = ParameterInteger(name="ProcessingInstanceCount", default_value=1)
     model_approval_status = ParameterString(
-        name="ModelApprovalStatus",
-        default_value="Approved"
+        name="ModelApprovalStatus", default_value="Approved"
     )
     input_data = ParameterString(
-        name="InputData",
-        default_value=input_data_uri,
+        name="InputDataUrl",
+        default_value=f's3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/training_data.csv',
     )
 
-    framework_version = "0.23-1"
-
+    # processing step for feature engineering
     sklearn_processor = SKLearnProcessor(
-        framework_version=framework_version,
-        instance_type="ml.m5.xlarge",
+        framework_version="0.23-1",
+        instance_type=processing_instance_type,
         instance_count=processing_instance_count,
-        base_job_name="nyc-traffic-process",
+        base_job_name=f"{base_job_prefix}/sklearn-nyy-traffic-preprocess",
+        sagemaker_session=pipeline_session,
         role=role,
     )
-
-    step_process = ProcessingStep(
-        name="TrafficProcess",
-        processor=sklearn_processor,
-        inputs=[
-        ProcessingInput(source=input_data, destination="/opt/ml/processing/input"),  
-        ],
+    step_args = sklearn_processor.run(
         outputs=[
             ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
             ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/test")
+            ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
         ],
-        code="preprocessing.py",
+        code=os.path.join(BASE_DIR, "preprocess.py"),
+        arguments=["--input-data", input_data],
+    )
+    step_process = ProcessingStep(
+        name="TrafficProcess",
+        step_args=step_args,
     )
 
     model_path = f"s3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/TrafficTrain"
