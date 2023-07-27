@@ -40,6 +40,11 @@ from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.workflow.lambda_step import LambdaStep
 from sagemaker.lambda_helper import Lambda
 
+from sagemaker.inputs import CreateModelInput
+from sagemaker.workflow.steps import CreateModelStep
+from sagemaker.model_metrics import MetricsSource, ModelMetrics 
+from sagemaker.workflow.step_collections import RegisterModel
+
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -143,50 +148,7 @@ def get_pipeline(
     model_package_group_name = f"NYCTrafficIncidentsModelPackageGroupName"
     input_data_uri = 's3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/training_data.csv'
 
-
-    from sagemaker.workflow.parameters import (
-        ParameterInteger,
-        ParameterString,
-    )
-
-    # processing_instance_count = ParameterInteger(
-    #     name="ProcessingInstanceCount",
-    #     default_value=1
-    # )
-    # model_approval_status = ParameterString(
-    #     name="ModelApprovalStatus",
-    #     default_value="Approved"
-    # )
-    # input_data = ParameterString(
-    #     name="InputData",
-    #     default_value=input_data_uri,
-    # )
-
-    # framework_version = "0.23-1"
-
-    # sklearn_processor = SKLearnProcessor(
-    #     framework_version=framework_version,
-    #     instance_type="ml.m5.xlarge",
-    #     instance_count=processing_instance_count,
-    #     base_job_name="nyc-traffic-process",
-    #     role=role,
-    # )
-
-    # step_process = ProcessingStep(
-    #     name="TrafficProcess",
-    #     processor=sklearn_processor,
-    #     inputs=[
-    #     ProcessingInput(source=input_data, destination="/opt/ml/processing/input"),  
-    #     ],
-    #     outputs=[
-    #         ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
-    #         ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-    #         ProcessingOutput(output_name="test", source="/opt/ml/processing/test")
-    #     ],
-    #     code="preprocessing.py",
-    # )
-
-     # parameters for pipeline execution
+    # parameters for pipeline execution
     processing_instance_count = ParameterInteger(name="ProcessingInstanceCount", default_value=1)
     model_approval_status = ParameterString(
         name="ModelApprovalStatus", default_value="Approved"
@@ -196,17 +158,13 @@ def get_pipeline(
         default_value=f's3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/training_data.csv',
     )
 
-    for dirpath, dirnames, filenames in os.walk('/path/to/your/directory'):
-        print(f'Found directory: {dirpath}')
-        for file_name in filenames:
-            print(file_name)
 
     # processing step for feature engineering
     sklearn_processor = SKLearnProcessor(
         framework_version="0.23-1",
         instance_type=processing_instance_type,
         instance_count=processing_instance_count,
-        base_job_name=f"{base_job_prefix}/sklearn-nyy-traffic-preprocess",
+        base_job_name=f"{base_job_prefix}/sklearn-ny-traffic-preprocess",
         sagemaker_session=pipeline_session,
         role=role,
     )
@@ -216,17 +174,16 @@ def get_pipeline(
             ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
             ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
         ],
-        code=os.path.join(BASE_DIR, "preprocess.py"),
+        code="pipelines/nyc_traffic_data/preprocessing.py",
         arguments=["--input-data", input_data],
     )
+    
     step_process = ProcessingStep(
         name="TrafficProcess",
         step_args=step_args,
     )
 
     model_path = f"s3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/TrafficTrain"
-
-
 
     image_uri = sagemaker.image_uris.retrieve(
         framework="xgboost",
@@ -285,22 +242,13 @@ def get_pipeline(
         accelerator_type="ml.eia1.medium",
     )
 
-
-
     step_create_model = CreateModelStep(
         name="NYCTrafficIncidentCreateModel",
         model=model,
         inputs=inputs,
     )
 
-    model_metrics = ModelMetrics(
-        model_statistics=MetricsSource(
-            s3_uri="{}/evaluation.json".format(
-                step_eval.arguments["ProcessingOutputConfig"]["Outputs"][0]["S3Output"]["S3Uri"]
-            ),
-            content_type="application/json"
-        )
-    )
+
     step_register = RegisterModel(
         name="NYCTrafficIncidentRegisterModel",
         estimator=xgb_train,
@@ -310,8 +258,7 @@ def get_pipeline(
         inference_instances=["ml.t2.medium", "ml.m5.xlarge"],
         transform_instances=["ml.m5.xlarge"],
         model_package_group_name=model_package_group_name,
-        approval_status=model_approval_status,
-        model_metrics=model_metrics
+        approval_status=model_approval_status
     )
 
     step_lambda = LambdaStep(

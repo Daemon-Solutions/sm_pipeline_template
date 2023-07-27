@@ -28,9 +28,14 @@ def merge_two_dicts(x, y):
 
 if __name__ == "__main__":
     base_dir = "/opt/ml/processing"
+    input_data_uri = 's3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/training_data.csv'
 
+    # df = pd.read_csv(
+    #     f"{base_dir}/input/training_data.csv",
+    #     dtype=merge_two_dicts(feature_columns_dtype, label_column_dtype)
+    # )
     df = pd.read_csv(
-        f"{base_dir}/input/training_data.csv",
+        input_data_uri,
         dtype=merge_two_dicts(feature_columns_dtype, label_column_dtype)
     )
 
