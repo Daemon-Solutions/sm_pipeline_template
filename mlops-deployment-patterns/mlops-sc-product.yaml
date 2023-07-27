@@ -230,6 +230,10 @@ Resources:
               Version: "2012-10-17"
               Statement:
                 - Effect: Allow
+                  - Action:
+                    - lambda:InvokeFunction
+                  - Resource: 'arn:aws:lambda:eu-west-1:144986566169:function:SageMakerModelNotifier'
+                - Effect: Allow
                   Action: 
                     - 's3:PutObject'
                     - 's3:GetObject'

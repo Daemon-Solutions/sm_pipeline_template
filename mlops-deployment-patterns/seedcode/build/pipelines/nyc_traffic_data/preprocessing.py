@@ -12,6 +12,14 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 
+import subprocess
+import sys
+
+package_list = ["fsspec", "s3fs"]
+
+subprocess.check_call([sys.executable, '-m', 'pip', 'install'] + package_list)
+
+
 feature_columns_dtype = {
     "BOROUGH": str,
     "TIME": str,
@@ -36,10 +44,7 @@ if __name__ == "__main__":
     #     f"{base_dir}/input/training_data.csv",
     #     dtype=merge_two_dicts(feature_columns_dtype, label_column_dtype)
     # )
-    df = pd.read_csv(
-        input_data_uri,
-        dtype=all_column_types
-    )
+    df = pd.read_csv(input_data_uri)
 
     categorical_features = ['BOROUGH' ,'TIME', 'WEEKDAY']
     
