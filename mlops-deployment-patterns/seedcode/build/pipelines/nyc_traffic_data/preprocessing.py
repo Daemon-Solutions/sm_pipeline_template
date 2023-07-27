@@ -15,15 +15,17 @@ from sklearn.model_selection import train_test_split
 feature_columns_dtype = {
     "BOROUGH": str,
     "TIME": str,
-    "WEEKDAY": str,
-    "NUMBER OF PERSONS INJURED": int,
+    "WEEKDAY": str
 }
 label_column_dtype = {"NUMBER OF PERSONS INJURED": int}
 
-def merge_two_dicts(x, y):
-    z = x.copy()
-    z.update(y)
-    return z
+all_column_types = {
+    "BOROUGH": str,
+    "TIME": str,
+    "WEEKDAY": str,
+    "NUMBER OF PERSONS INJURED": int,
+    "NUMBER OF PERSONS INJURED": int,
+}
 
 
 if __name__ == "__main__":
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     # )
     df = pd.read_csv(
         input_data_uri,
-        dtype=merge_two_dicts(feature_columns_dtype, label_column_dtype)
+        dtype=all_column_types
     )
 
     categorical_features = ['BOROUGH' ,'TIME', 'WEEKDAY']
