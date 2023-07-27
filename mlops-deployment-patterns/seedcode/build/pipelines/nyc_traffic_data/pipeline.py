@@ -196,6 +196,11 @@ def get_pipeline(
         default_value=f's3://sagemaker-ml-ops-utility-bucket/sm_pipeline_template/training_data.csv',
     )
 
+    for dirpath, dirnames, filenames in os.walk('/path/to/your/directory'):
+        print(f'Found directory: {dirpath}')
+        for file_name in filenames:
+            print(file_name)
+
     # processing step for feature engineering
     sklearn_processor = SKLearnProcessor(
         framework_version="0.23-1",
