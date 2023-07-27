@@ -122,7 +122,7 @@ def get_pipeline_custom_tags(new_tags, region, sagemaker_project_arn=None):
 def get_pipeline(
     region,
     sagemaker_project_arn=None,
-    role=None,
+    role="arn:aws:iam::144986566169:role/DaemonMLAISageMakerRole",
     default_bucket=None,
     model_package_group_name="NYCTrafficIncidentsModelPackageGroupName",
     pipeline_name="NYCTrafficIncidentsPipeline",
@@ -130,7 +130,7 @@ def get_pipeline(
     processing_instance_type="ml.m5.xlarge",
     training_instance_type="ml.m5.xlarge",
 ):
-    """Gets a SageMaker ML Pipeline instance working with on abalone data.
+    """Gets a SageMaker ML Pipeline instance working with NYC traffic collision data
 
     Args:
         region: AWS region to create and run the pipeline.
@@ -143,6 +143,8 @@ def get_pipeline(
     sagemaker_session = get_session(region, default_bucket)
     if role is None:
         role = sagemaker.session.get_execution_role(sagemaker_session)
+
+    print(f"ExecutionRole is {role}")
 
     pipeline_session = get_pipeline_session(region, default_bucket)
 
