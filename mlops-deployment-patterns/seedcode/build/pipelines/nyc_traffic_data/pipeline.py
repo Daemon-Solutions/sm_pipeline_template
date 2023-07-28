@@ -267,7 +267,7 @@ def get_pipeline(
     step_lambda = LambdaStep(
         name="NotificationLambda",
         lambda_func=Lambda(
-            function_arn="arn:aws:lambda:eu-west-1:144986566169:function:SageMakerModelNotifier"
+            function_arn="arn:aws:lambda:eu-west-2:144986566169:function:SageMakerModelNotifier"
         ),
         inputs={
             "dummy_input": step_register.properties.ModelPackageName,
