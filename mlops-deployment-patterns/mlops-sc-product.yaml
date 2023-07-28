@@ -8,7 +8,7 @@ Parameters:
 
   PortfolioIDParameter:
     Type: String
-    Default: port-q7cei7tumwtl2
+    Default: port-6g2iwj5sjgczm
     Description: The ID of the Service Catalog Portfolio you wish you create the product inside. 
 
   ProductNameParameter:
